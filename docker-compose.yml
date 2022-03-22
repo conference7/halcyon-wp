@@ -1,8 +1,6 @@
 version: "3"
 
 # What we want to run:
-# - DNS service
-# - nginx-proxy for forwarding requests
 # - VPN service
 # - Catch-all mailserver
 # - Backup service for iPhones
@@ -24,4 +22,12 @@ services:
       - DNS_FORWARDER=192.168.1.1
       - DOCKER_LOGS=1
       - DEBUG_ENTRYPOINT=2
+    restart: always
+  
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
     restart: always
