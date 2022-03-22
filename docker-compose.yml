@@ -1,0 +1,9 @@
+version: "3"
+
+# What we want to run:
+# - DNS service
+# - nginx-proxy for forwarding requests
+# - VPN service
+# - Catch-all mailserver
+# - Backup service for iPhones
+# - TimeMachine backup service
