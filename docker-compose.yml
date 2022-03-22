@@ -1,12 +1,5 @@
 version: "3"
 
-# What we want to run:
-# - VPN service
-# - Catch-all mailserver
-# - Backup service for iPhones
-# - TimeMachine backup service
-
-
 services:
   dns:
     container_name: dns
