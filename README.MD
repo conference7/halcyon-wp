@@ -13,3 +13,4 @@ Featuring:
 
 Blog series:
 1. https://mklasen.com/halcyon-part-1-idea-execution/
+2. https://mklasen.com/halcyon-part-2-the-docker-compose-yml-configuration/
