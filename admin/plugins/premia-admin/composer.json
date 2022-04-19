@@ -1,0 +1,15 @@
+{
+    "name": "mklasen/premia-admin",
+    "authors": [
+        {
+            "name": "Marinus Klasen",
+            "email": "marinus@mklasen.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Premia_Admin\\": "classes/"
+        }
+    }
+}

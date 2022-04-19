@@ -1,0 +1,14 @@
+version: "3"
+services:
+  whoami:
+    image: traefik/whoami
+    container_name: test-whoami
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.premia.tmprly.com`)"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
+      - "traefik.http.routers.whoami.tls.certresolver=myresolver"
+networks:
+  default:
+    external:
+      name: swarm

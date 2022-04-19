@@ -1,0 +1,42 @@
+version: "3"
+services:
+  reverse-proxy:
+    # The official v2 Traefik docker image
+    image: traefik:v2.6
+    container_name: proxy
+    # Enables the web UI and tells Traefik to listen to docker
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.ssh.address=:2222"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=info@premia.tmprly.com"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    # labels:
+    #   - "traefik.frontend.auth.basic=admin:$$apr1$$lyahz2vg$$/603cGC.Ji/4/F4JVCsse1"
+    #   - "traefik.http.routers.whoami.rule=Host(`admin.premia.tmprly.com`)"
+    #   - "traefik.http.routers.whoami.entrypoints=websecure"
+    #   - "traefik.http.routers.whoami.tls.certresolver=myresolver"
+    #   - "traefik.docker.network=swarm"
+    ports:
+      # The HTTPS port
+      - "443:443"
+      - "2222:2222"
+      # The Web UI (enabled by --api.insecure=true)
+      - "8080:8080"
+    volumes:
+      - "./letsencrypt:/letsencrypt"
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock
+
+networks:
+  default:
+    external:
+      name: swarm

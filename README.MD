@@ -14,3 +14,8 @@ Featuring:
 Blog series:
 1. https://mklasen.com/halcyon-part-1-idea-execution/
 2. https://mklasen.com/halcyon-part-2-the-docker-compose-yml-configuration/
+
+
+### Issues
+1. Done: SSH home directory
+2. ? VS Code compatibility (the remote host may not meet vs code server's prerequisites for glibc and libstdc++)
