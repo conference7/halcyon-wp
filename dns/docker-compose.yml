@@ -10,7 +10,7 @@ services:
     expose:
       - "53"
     environment:
-      - DNS_A=*.hyc=164.92.151.1
+      - DNS_A=*.local.premia.tmprly.com=164.92.151.1
       - DNS_FORWARDER=1.1.1.1
       - DOCKER_LOGS=1
       - DEBUG_ENTRYPOINT=2

@@ -10,6 +10,7 @@ require 'vendor/autoload.php';
 class Main {
 
 	private $api_url = 'http://164.92.151.1:4243';
+	private $domain = "premia.tmprly.com";
 
 	public function __construct() {
 		$this->hooks();
@@ -20,7 +21,10 @@ class Main {
 		add_action('init', array($this, 'register_post_types'));
 		add_action('acf/save_post', array($this, 'save_post'), 20);
 		add_action('trashed_post', array($this, 'remove_env'), 20);
-		add_action('acf/render_field/name=container_ids', array($this, 'add_details'));
+		add_filter('acf/load_field/key=field_625fa86ec3f06', array($this, 'add_details'));
+		add_filter('acf/load_field/key=field_625faaf581eec', array($this, 'add_manage_buttons'));
+		add_filter('acf/load_field/name=container_ids', array($this, 'set_read_only'));
+		add_filter('acf/load_field/name=port', array($this, 'set_read_only'));
 		add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
 
 		$this->rest_init();
@@ -41,7 +45,7 @@ class Main {
 
 	public function get_container_ids($post_id) {
 		$container_ids = get_field('container_ids', $post_id);
-		return explode(',', $container_ids);
+		return array_filter(explode(',', $container_ids));
 	}
 
 	public function register_post_types() {
@@ -84,8 +88,6 @@ class Main {
 		update_field('port', $port);
 
 		$requests = [];
-
-		$this->create_home($post);
 		
 		$requests[] = $this->create_ssh($post);
 		$requests[] = $this->create_database($post);
@@ -134,11 +136,23 @@ class Main {
 		return $port;
 	}
 
-	public function create_home($post) {
-		// No access to home dir?
+	public function get_hostname($post) {
+
+		$hostname = $post->post_name;
+
+		$local = get_field('local', $post->ID);
+
+		if (true === $local) {
+			$hostname = "{$hostname}.local";
+		}
+
+		return "{$hostname}.{$this->domain}";
 	}
 
 	public function create_wordpress($post) {
+
+		$hostname = $this->get_hostname($post);
+
 		return $this->docker_request('POST', '/containers/create?name=' . $post->post_name .'-wp', array(
 			"Image" => "wordpress",
 			"Env" => [
@@ -149,7 +163,7 @@ class Main {
 			],
 			"Labels" => [
 				"traefik.enable" => "true",
-				"traefik.http.routers.{$post->post_name}.rule" => "Host(`{$post->post_name}.premia.tmprly.com`)",
+				"traefik.http.routers.{$post->post_name}.rule" => "Host(`{$hostname}`)",
 				"traefik.http.routers.{$post->post_name}.entrypoints" => "websecure",
 				"traefik.http.routers.{$post->post_name}.tls.certresolver" => "myresolver"
 			],
@@ -160,7 +174,8 @@ class Main {
 				"NetworkMode" => "swarm",
 				"Binds" => [
 					"/home/mklasen/halcyon-wp/users/home/{$post->post_name}/config/web/themes:/var/www/html/wp-content/themes",
-					"/home/mklasen/halcyon-wp/users/home/{$post->post_name}/config/web/plugins:/var/www/html/wp-content/plugins"
+					"/home/mklasen/halcyon-wp/users/home/{$post->post_name}/config/web/plugins:/var/www/html/wp-content/plugins",
+					"/home/mklasen/halcyon-wp/users/home/{$post->post_name}/config/wp:/var/www/html"
 				 ]
 			]
 		));
@@ -212,7 +227,6 @@ class Main {
 				],
 				"Binds" => [
 					"/home/mklasen/halcyon-wp/users/defaults/custom-cont-init.d:/config/custom-cont-init.d",
-					// "/home/mklasen/halcyon-wp/users/defaults/web:/config/web",
 					"/home/mklasen/halcyon-wp/users/defaults/.profile:/config/.profile",
 					"/home/mklasen/halcyon-wp/users/home/{$post->post_name}/config:/config",
 					"/home/mklasen/halcyon-wp/users/welcome.txt:/etc/motd",
@@ -248,33 +262,71 @@ class Main {
 	}
 
 	public function add_details($field) {
+
+		$field['disabled'] = true;
+
 		$post_id = get_the_ID();
 		$post = get_post($post_id);
-		$container_ids = $this->get_container_ids($post_id);
 
-		$hostname = $post->post_name.'.premia.tmprly.com';
+		$hostname = $this->get_hostname($post);
+		$container_ids = $this->get_container_ids($post_id);
 		$port = get_field('port', $post_id);
 
-		echo '<div class="premia-container-control">';
-		if (is_array($container_ids)) {
-			?>
-			<p><button class="button" target="_blank" data-id="<?php echo $post_id; ?>" data-action="start">Start containers</button></p>
-			<p><button class="button" target="_blank" data-id="<?php echo $post_id; ?>" data-action="stop">Stop containers</button></p>
-			<?php
+		if (!empty($container_ids)) {
+
+			ob_start();
+
+			echo "<table>";
+			echo "<tr><td>Host</td><td>{$hostname}</td></tr>";
+			echo "<tr><td>Username</td><td>{$post->post_name}</td></tr>";
+			echo "<tr><td>Password</td><td>{$post->post_name}</td></tr>";
+			echo "<tr><td>Port</td><td>{$port}</td></tr>";
+			echo "</table>";
+
+			echo "<p>SSH: <i>ssh {$post->post_name}@{$hostname} -p{$port}</i></p>";
+
+			echo '<p><a class="button button-primary button-large" target="_blank" href="https://'.$hostname.'">Visit environment</a></p>';
+
+
+			$field['message'] = ob_get_clean();
 				
+		} else {
+			$field['message'] = '<p><i>Environment has not been created yet.</i>';
 		}
-		echo '</div>';
 
-		echo "<table>";
-		echo "<tr><td>Host</td><td>{$hostname}</td></tr>";
-		echo "<tr><td>Username</td><td>{$post->post_name}</td></tr>";
-		echo "<tr><td>Password</td><td>{$post->post_name}</td></tr>";
-		echo "<tr><td>Port</td><td>{$port}</td></tr>";
-		echo "</table>";
+		return $field;
+	}
 
-		echo "<p>SSH: <i>ssh {$post->post_name}@{$hostname} -p{$port}</i></p>";
+	public function add_manage_buttons($field) {
 
-		echo '<p><a class="button button-primary button-large" target="_blank" href="https://'.$hostname.'">Visit environment</a></p>';
+		$field['disabled'] = true;
+
+		$post_id = get_the_ID();
+		$container_ids = $this->get_container_ids($post_id);
+
+		$port = get_field('port', $post_id);
+
+		if (is_array($container_ids) && !empty($container_ids)) {
+			ob_start();
+			?>
+			<div class="premia-container-control">
+			<p>
+				<button class="button" target="_blank" data-id="<?php echo $post_id; ?>" data-action="start">Start containers</button>
+				<button class="button" target="_blank" data-id="<?php echo $post_id; ?>" data-action="stop">Stop containers</button>
+			</p>
+			</div>
+			<?php
+			$field['message'] = ob_get_clean();
+		} else {
+			$field['message'] = '<p><i>Environment has not been created yet.</i>';
+		}
+
+		return $field;
+	}
+
+	public function set_read_only($field) {
+		$field['readonly'] = true;
+		return $field;
 	}
 
 	public function register_endpoints() {
